@@ -85,7 +85,8 @@ if prompt := st.chat_input("Ask me about travel, food, or history..."):
         If the user asks about anything OUTSIDE of Gujarat travel, politely steer them back to Gujarat.
         """
         
-        model = genai.GenerativeModel('gemini-pro')
+        # UPDATED: Use 'gemini-1.5-flash' instead of 'gemini-pro' to fix 404 error
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Create a chat session with history
         chat = model.start_chat(history=[])
