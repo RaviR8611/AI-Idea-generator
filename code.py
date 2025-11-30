@@ -85,8 +85,29 @@ if prompt := st.chat_input("Ask me about travel, food, or history..."):
         If the user asks about anything OUTSIDE of Gujarat travel, politely steer them back to Gujarat.
         """
         
-        # UPDATED: Use 'gemini-1.5-flash' instead of 'gemini-pro' to fix 404 error
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # --- UPDATED LOGIC TO FIX 404 ERRORS ---
+        # Instead of hardcoding 'gemini-1.5-flash', we dynamically find a working model
+        target_model = "gemini-1.5-flash" # Default fallback
+        try:
+            with st.spinner('Connecting to AI brain...'):
+                # List all models available to your API key
+                available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                
+                # Logic: Look for Flash, then Pro, then anything else
+                if any("gemini-1.5-flash" in m for m in available_models):
+                    target_model = next(m for m in available_models if "gemini-1.5-flash" in m)
+                elif any("gemini-pro" in m for m in available_models):
+                    target_model = next(m for m in available_models if "gemini-pro" in m)
+                elif available_models:
+                    target_model = available_models[0] # Pick the first available one
+                
+                # st.toast(f"Using model: {target_model}") # Optional: show user which model picked
+        except Exception as e:
+            # If listing fails, stick to default
+            pass
+
+        model = genai.GenerativeModel(target_model)
+        # ---------------------------------------
         
         # Create a chat session with history
         chat = model.start_chat(history=[])
