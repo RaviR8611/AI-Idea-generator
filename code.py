@@ -1,35 +1,96 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 
 # 1. Page Configuration
-st.set_page_config(page_title="My AI Assistant", page_icon="🤖")
-st.title("🤖 AI Idea Generator")
+st.set_page_config(
+    page_title="Gujarat Travel AI",
+    page_icon="🦁",
+    layout="wide"
+)
 
-# 2. Securely access the API Key
-# This pulls the key from Streamlit's "Secrets" manager
-try:
-    api_key = st.secrets["OPENAI_API_KEY"]
-except FileNotFoundError:
-    st.error("OpenAI API Key not found. Please set it in Streamlit Secrets.")
-    st.stop()
+# 2. Sidebar for API Key & Settings
+with st.sidebar:
+    st.image("https://www.gujarattourism.com/content/dam/gujrattourism/images/logo.png", width=200)
+    st.title("⚙️ Settings")
+    
+    # Secure API Key Entry
+    api_key = st.text_input("Enter Google Gemini API Key:", type="password")
+    
+    st.markdown("---")
+    st.markdown("""
+    ### 🎒 Suggested Questions:
+    - *Plan a 3-day trip to Kutch for Rann Utsav.*
+    - *Best places to eat authentic Gujarati Thali in Ahmedabad?*
+    - *How do I book a safari in Gir National Park?*
+    - *Itinerary for Dwarka and Somnath temples.*
+    """)
+    st.markdown("---")
+    st.info("Powered by Google Gemini (Free Tier)")
 
-client = OpenAI(api_key=api_key)
+# 3. Main Chat Interface
+st.title("🦁 Namaste! Welcome to Gujarat Tourism AI")
+st.write("I am your personal guide to the Land of Legends. Ask me anything about Gujarat!")
 
-# 3. The User Interface
-user_topic = st.text_input("What topic are you interested in?", "Sustainable Energy")
+# Initialize Chat History in Session State
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "model", "content": "Kem cho? I can help you plan trips to the Statue of Unity, the White Desert, Gir Forest, and more. Where would you like to go?"}
+    ]
 
-# 4. The Logic
-if st.button("Generate Ideas"):
-    with st.spinner('Thinking...'):
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful startup consultant."},
-                    {"role": "user", "content": f"Give me 3 innovative startup ideas regarding {user_topic}."}
-                ]
-            )
-            st.success("Here are your ideas:")
-            st.write(response.choices[0].message.content)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+# Display Chat History
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 4. The Brains (AI Logic)
+if prompt := st.chat_input("Ask me about travel, food, or history..."):
+    
+    # A. Check for API Key
+    if not api_key:
+        st.error("Please enter your Google Gemini API Key in the sidebar to start!")
+        st.stop()
+
+    # B. Display User Message
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # C. Configure Gemini with "Expert" Knowledge
+    try:
+        genai.configure(api_key=api_key)
+        
+        # We use a system prompt to give the AI a "persona"
+        system_instruction = """
+        You are an expert travel agent for the state of Gujarat, India.
+        Your tone should be warm, welcoming, and helpful ('Kem cho', 'Majama').
+        
+        Key Knowledge Areas:
+        1. Destinations: Rann of Kutch (White Desert), Gir National Park (Asiatic Lions), Statue of Unity, Ahmedabad (UNESCO Heritage), Dwarka & Somnath (Pilgrimage), Saputara (Hill Station).
+        2. Food: Recommend Dhokla, Thepla, Fafda-Jalebi, Undhiyu (winter special), and the best Thali places (like Agashiye).
+        3. Logistics: Best time to visit is Oct-March. Mention Rann Utsav dates if asked.
+        4. Safety: Gujarat is very safe for tourists.
+        
+        If the user asks about anything OUTSIDE of Gujarat travel, politely steer them back to Gujarat.
+        """
+        
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Create a chat session with history
+        chat = model.start_chat(history=[])
+        
+        # Send the system context + user prompt
+        # (Note: Gemini Pro doesn't strictly support system messages in history list yet, 
+        # so we prepend instructions to the first prompt or handle it via context)
+        full_prompt = f"{system_instruction}\n\nUser Question: {prompt}"
+        
+        with st.spinner('Checking the map...'):
+            response = chat.send_message(full_prompt)
+            ai_response = response.text
+
+        # D. Display AI Response
+        with st.chat_message("model"):
+            st.markdown(ai_response)
+        st.session_state.messages.append({"role": "model", "content": ai_response})
+
+    except Exception as e:
+        st.error(f"Error: {e}")
