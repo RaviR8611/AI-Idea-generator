@@ -11,7 +11,7 @@ st.write("Enter a topic, and I will generate 3 startup ideas for you.")
 # 3. Sidebar for API Key (Keeps it secure)
 # api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
 # Replace the sidebar input line with this:
-api_key = st.secrets["OPENAI_API_KEY"]
+api_key = st.secrets["sk-...b6YA"]
 
 # 4. The User Interface
 user_topic = st.text_input("What topic are you interested in?", "Sustainable Energy")
