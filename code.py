@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+import os
 
 # 1. Page Configuration
 st.set_page_config(
@@ -13,8 +14,20 @@ with st.sidebar:
     st.image("https://www.gujarattourism.com/content/dam/gujrattourism/images/logo.png", width=200)
     st.title("⚙️ Settings")
     
-    # Secure API Key Entry
-    api_key = st.text_input("Enter Google Gemini API Key:", type="password")
+    # --- CHANGED SECTION START ---
+    # This logic checks if you set the secret in the cloud.
+    # If yes, it uses it automatically. If no, it shows the text box.
+    
+    api_key = None
+    
+    # Check for the key in Streamlit Secrets
+    if "GOOGLE_API_KEY" in st.secrets:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        st.success("✅ API Key loaded automatically!")
+    else:
+        # Fallback: Ask the user to enter it manually
+        api_key = st.text_input("Enter Google Gemini API Key:", type="password")
+    # --- CHANGED SECTION END ---
     
     st.markdown("---")
     st.markdown("""
@@ -59,7 +72,6 @@ if prompt := st.chat_input("Ask me about travel, food, or history..."):
     try:
         genai.configure(api_key=api_key)
         
-        # We use a system prompt to give the AI a "persona"
         system_instruction = """
         You are an expert travel agent for the state of Gujarat, India.
         Your tone should be warm, welcoming, and helpful ('Kem cho', 'Majama').
@@ -78,9 +90,6 @@ if prompt := st.chat_input("Ask me about travel, food, or history..."):
         # Create a chat session with history
         chat = model.start_chat(history=[])
         
-        # Send the system context + user prompt
-        # (Note: Gemini Pro doesn't strictly support system messages in history list yet, 
-        # so we prepend instructions to the first prompt or handle it via context)
         full_prompt = f"{system_instruction}\n\nUser Question: {prompt}"
         
         with st.spinner('Checking the map...'):
